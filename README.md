@@ -11,6 +11,20 @@ Für den Barcode-Scanner per Kamera muss die Seite über HTTPS laufen (z. B. Git
 Browser geben die Kamera sonst nicht frei. Ohne Kamera kann die Nummer unter dem Barcode
 auch von Hand eingegeben werden.
 
+## Als App aufs Handy
+
+Der Tracker ist eine installierbare Web-App (PWA): Sobald er über HTTPS erreichbar ist, die Seite
+auf dem Handy öffnen und
+
+- **iPhone (Safari):** Teilen-Symbol → *Zum Home-Bildschirm*
+- **Android (Chrome):** Menü ⋮ → *App installieren* bzw. *Zum Startbildschirm hinzufügen*
+
+Danach startet er wie eine normale App mit eigenem Icon, im Vollbild und funktioniert auch offline
+(nur das Nachschlagen neuer Barcodes braucht Internet).
+
+Hinweis für iPhones: Die installierte App hat einen eigenen Speicher, getrennt von Safari. Am besten
+direkt installieren und dann nur noch die App benutzen – oder Daten per Export/Import übertragen.
+
 ## Funktionen
 
 - Einträge nach Mahlzeit (Frühstück, Mittagessen, Abendessen, Snacks) mit Kalorien, Eiweiß, Kohlenhydraten und Fett
