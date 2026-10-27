@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalorientracker</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #6b7280;
+    --border: #e3e6eb; --accent: #2f7d5b; --accent-soft: #e3f2ea;
+    --warn: #c2410c; --protein: #3b82f6; --carbs: #f59e0b; --fat: #a855f7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --text: #e7eaf0; --muted: #9aa3b2;
+      --border: #2b323e; --accent: #4fb985; --accent-soft: #1f3a2d;
+      --warn: #fb923c;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 760px; margin: 0 auto; padding: 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  h1 { font-size: 1.4rem; margin: 0; }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .datebar { display: flex; align-items: center; gap: 6px; }
+  .datebar span { min-width: 120px; text-align: center; font-weight: 600; }
+  button, input, select {
+    font: inherit; color: inherit; background: var(--card);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+  }
+  button { cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.icon { padding: 6px 10px; }
+  input:focus, select:focus, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .summary { display: grid; grid-template-columns: 150px 1fr; gap: 20px; align-items: center; }
+  .ring { position: relative; width: 150px; height: 150px; }
+  .ring svg { transform: rotate(-90deg); }
+  .ring .center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ring .big { font-size: 1.6rem; font-weight: 700; }
+  .ring .small { color: var(--muted); font-size: .8rem; }
+  .macro { margin-bottom: 10px; }
+  .macro .row { display: flex; justify-content: space-between; font-size: .9rem; }
+  .bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 4px; }
+  .bar > div { height: 100%; border-radius: 4px; transition: width .3s; }
+
+  form.add { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+  form.add label { display: flex; flex-direction: column; font-size: .8rem; color: var(--muted); gap: 3px; }
+  form.add .wide { grid-column: span 3; }
+  form.add .mid { grid-column: span 2; }
+  form.add input, form.add select { width: 100%; color: var(--text); }
+  form.add button { grid-column: span 6; }
+  .hint { color: var(--muted); font-size: .8rem; margin: 6px 0 0; }
+
+  .meal { margin-bottom: 14px; }
+  .meal h3 { font-size: .95rem; margin: 0 0 6px; display: flex; justify-content: space-between; }
+  .meal h3 small { color: var(--muted); font-weight: 500; }
+  ul.entries { list-style: none; margin: 0; padding: 0; }
+  ul.entries li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--border); }
+  ul.entries li .name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  ul.entries li .meta { color: var(--muted); font-size: .8rem; }
+  ul.entries li .kcal { font-weight: 600; white-space: nowrap; }
+  .empty { color: var(--muted); font-size: .9rem; }
+
+  .chart { display: flex; gap: 8px; height: 150px; }
+  .chart .col { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; gap: 4px; }
+  .chart .col .area { flex: 1; width: 100%; position: relative; display: flex; align-items: flex-end; justify-content: center; }
+  .chart .col .b { width: 100%; max-width: 44px; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; }
+  .chart .col .b.over { background: var(--warn); }
+  .chart .col small { color: var(--muted); font-size: .72rem; height: 1.2em; line-height: 1.2em; white-space: nowrap; }
+  .chart .goal { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--muted); opacity: .5; pointer-events: none; }
+
+  details summary { cursor: pointer; font-weight: 600; }
+  .settings { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+  .settings label { display: flex; flex-direction: column; font-size: .8rem; color: var(--muted); gap: 3px; }
+  .settings input, .settings select { color: var(--text); }
+  .settings .full { grid-column: span 2; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  @media (max-width: 560px) {
+    .summary { grid-template-columns: 1fr; justify-items: center; }
+    .summary .macros { width: 100%; }
+    header { flex-wrap: wrap; }
+    .datebar span { min-width: 80px; }
+    form.add label { grid-column: span 2; }
+    form.add .wide, form.add .kcal { grid-column: span 6; }
+    form.add .half { grid-column: span 3; }
+    .settings { grid-template-columns: 1fr; }
+    .settings .full { grid-column: span 1; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Kalorientracker</h1>
+    <div class="datebar">
+      <button class="icon" id="prevDay" aria-label="Vorheriger Tag">‹</button>
+      <span id="dateLabel"></span>
+      <button class="icon" id="nextDay" aria-label="Nächster Tag">›</button>
+    </div>
+  </header>
+
+  <section class="card summary">
+    <div class="ring">
+      <svg width="150" height="150" viewBox="0 0 150 150" aria-hidden="true">
+        <circle cx="75" cy="75" r="64" fill="none" stroke="var(--border)" stroke-width="12"/>
+        <circle id="ringFill" cx="75" cy="75" r="64" fill="none" stroke="var(--accent)" stroke-width="12"
+                stroke-linecap="round" stroke-dasharray="402.1" stroke-dashoffset="402.1"/>
+      </svg>
+      <div class="center">
+        <div class="big" id="remaining">0</div>
+        <div class="small" id="remainingLabel">kcal übrig</div>
+      </div>
+    </div>
+    <div class="macros">
+      <div class="macro"><div class="row"><strong>Kalorien</strong><span id="kcalText"></span></div></div>
+      <div class="macro"><div class="row"><span>Eiweiß</span><span id="pText"></span></div><div class="bar"><div id="pBar" style="background:var(--protein)"></div></div></div>
+      <div class="macro"><div class="row"><span>Kohlenhydrate</span><span id="cText"></span></div><div class="bar"><div id="cBar" style="background:var(--carbs)"></div></div></div>
+      <div class="macro"><div class="row"><span>Fett</span><span id="fText"></span></div><div class="bar"><div id="fBar" style="background:var(--fat)"></div></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Eintrag hinzufügen</h2>
+    <form class="add" id="addForm" autocomplete="off">
+      <label class="wide">Lebensmittel
+        <input id="fName" list="foodList" required placeholder="z. B. Haferflocken">
+        <datalist id="foodList"></datalist>
+      </label>
+      <label class="half">Menge (g)
+        <input id="fGrams" type="number" min="0" step="any" placeholder="optional">
+      </label>
+      <label class="mid half">Mahlzeit
+        <select id="fMeal">
+          <option>Frühstück</option><option>Mittagessen</option><option>Abendessen</option><option>Snacks</option>
+        </select>
+      </label>
+      <label class="mid kcal">Kalorien (kcal)
+        <input id="fKcal" type="number" min="0" step="any" required>
+      </label>
+      <label>Eiweiß (g)<input id="fP" type="number" min="0" step="any"></label>
+      <label>Kohlenh. (g)<input id="fC" type="number" min="0" step="any"></label>
+      <label class="mid">Fett (g)<input id="fF" type="number" min="0" step="any"></label>
+      <button class="primary" type="submit">Hinzufügen</button>
+    </form>
+    <p class="hint">Tipp: Wähle ein Lebensmittel aus der Liste und gib die Menge in Gramm an – Kalorien und Makros werden automatisch berechnet. Eigene Einträge werden für später gemerkt.</p>
+  </section>
+
+  <section class="card">
+    <h2>Heute gegessen</h2>
+    <div id="meals"></div>
+  </section>
+
+  <section class="card">
+    <h2>Letzte 7 Tage</h2>
+    <div class="chart" id="chart"></div>
+    <p class="hint" id="avgText"></p>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>Einstellungen &amp; Ziel</summary>
+      <div class="settings">
+        <label>Tagesziel (kcal)<input id="sGoal" type="number" min="500" step="10"></label>
+        <label>Eiweißziel (g)<input id="sProtein" type="number" min="0"></label>
+        <label>Kohlenhydratziel (g)<input id="sCarbs" type="number" min="0"></label>
+        <label>Fettziel (g)<input id="sFat" type="number" min="0"></label>
+      </div>
+      <h2 style="margin-top:18px">Bedarf berechnen</h2>
+      <div class="settings">
+        <label>Geschlecht<select id="cSex"><option value="m">männlich</option><option value="f">weiblich</option></select></label>
+        <label>Alter<input id="cAge" type="number" min="10" max="110" value="30"></label>
+        <label>Gewicht (kg)<input id="cWeight" type="number" min="30" step="0.1" value="75"></label>
+        <label>Größe (cm)<input id="cHeight" type="number" min="100" value="178"></label>
+        <label>Aktivität
+          <select id="cActivity">
+            <option value="1.2">kaum aktiv (Bürojob)</option>
+            <option value="1.375" selected>leicht aktiv (1–3× Sport/Woche)</option>
+            <option value="1.55">mäßig aktiv (3–5× Sport/Woche)</option>
+            <option value="1.725">sehr aktiv (6–7× Sport/Woche)</option>
+          </select>
+        </label>
+        <label>Ziel
+          <select id="cTarget">
+            <option value="-500">abnehmen (−500 kcal)</option>
+            <option value="0" selected>Gewicht halten</option>
+            <option value="300">zunehmen (+300 kcal)</option>
+          </select>
+        </label>
+        <div class="full">
+          <button class="primary" id="calcBtn" type="button">Berechnen &amp; als Ziel übernehmen</button>
+          <span class="hint" id="calcResult"></span>
+        </div>
+      </div>
+      <h2 style="margin-top:18px">Daten</h2>
+      <div class="settings">
+        <div class="full">
+          <button id="exportBtn" type="button">Exportieren (JSON)</button>
+          <button id="importBtn" type="button">Importieren</button>
+          <input id="importFile" type="file" accept="application/json" hidden>
+        </div>
+      </div>
+    </details>
+  </section>
+</main>
+
+<script>
+(() => {
+  const STORAGE_KEY = 'kalorientracker:v1';
+  const MEALS = ['Frühstück', 'Mittagessen', 'Abendessen', 'Snacks'];
+
+  // Nährwerte pro 100 g (Richtwerte)
+  const BASE_FOODS = {
+    'Apfel': [52, 0.3, 14, 0.2], 'Banane': [89, 1.1, 23, 0.3], 'Haferflocken': [372, 13.5, 59, 7],
+    'Vollkornbrot': [220, 7, 41, 1.5], 'Brötchen': [270, 9, 53, 1.5], 'Reis (gekocht)': [130, 2.7, 28, 0.3],
+    'Nudeln (gekocht)': [150, 5.5, 30, 0.9], 'Kartoffeln (gekocht)': [77, 2, 17, 0.1],
+    'Hähnchenbrust': [110, 23, 0, 1.5], 'Rinderhack': [250, 18, 0, 20], 'Lachs': [208, 20, 0, 13],
+    'Ei': [155, 13, 1.1, 11], 'Magerquark': [67, 12, 4, 0.2], 'Naturjoghurt 3,5%': [61, 3.5, 4.7, 3.5],
+    'Milch 1,5%': [47, 3.4, 4.9, 1.5], 'Gouda': [356, 25, 0, 27], 'Butter': [741, 0.7, 0.6, 83],
+    'Olivenöl': [884, 0, 0, 100], 'Erdnussbutter': [588, 25, 20, 50], 'Mandeln': [579, 21, 22, 50],
+    'Brokkoli': [34, 2.8, 7, 0.4], 'Tomate': [18, 0.9, 3.9, 0.2], 'Gurke': [15, 0.7, 3.6, 0.1],
+    'Linsen (gekocht)': [116, 9, 20, 0.4], 'Tofu': [144, 15, 3, 9], 'Zartbitterschokolade': [546, 5, 46, 31],
+  };
+
+  const defaults = () => ({
+    settings: { goal: 2200, protein: 140, carbs: 250, fat: 70 },
+    days: {},        // 'YYYY-MM-DD' -> [{id, name, meal, grams, kcal, p, c, f}]
+    customFoods: {}, // name -> [kcal, p, c, f] pro 100 g
+  });
+
+  let state = load();
+  let current = todayKey();
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return Object.assign(defaults(), JSON.parse(raw));
+    } catch (e) { /* Speicher nicht verfügbar */ }
+    return defaults();
+  }
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* ignorieren */ }
+  }
+
+  function keyOf(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  function todayKey() { return keyOf(new Date()); }
+  function parseKey(k) { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); }
+  function shift(k, days) { const d = parseKey(k); d.setDate(d.getDate() + days); return keyOf(d); }
+
+  const $ = id => document.getElementById(id);
+  const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isFinite(n) ? n : 0; };
+  const fmt = n => Math.round(n).toLocaleString('de-DE');
+  const round1 = n => Math.round(n * 10) / 10;
+  const fmt1 = n => round1(n).toLocaleString('de-DE');
+  const allFoods = () => Object.assign({}, BASE_FOODS, state.customFoods);
+  const entries = k => state.days[k] || [];
+  const totals = list => list.reduce((t, e) => ({
+    kcal: t.kcal + e.kcal, p: t.p + e.p, c: t.c + e.c, f: t.f + e.f,
+  }), { kcal: 0, p: 0, c: 0, f: 0 });
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  }
+
+  function dateLabel(k) {
+    const t = todayKey();
+    if (k === t) return 'Heute';
+    if (k === shift(t, -1)) return 'Gestern';
+    if (k === shift(t, 1)) return 'Morgen';
+    return parseKey(k).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+  }
+
+  function renderFoodList() {
+    $('foodList').innerHTML = Object.keys(allFoods()).sort((a, b) => a.localeCompare(b, 'de'))
+      .map(n => `<option value="${escapeHtml(n)}">`).join('');
+  }
+
+  function setBar(id, value, goal) {
+    $(id).style.width = Math.min(100, goal ? value / goal * 100 : 0) + '%';
+  }
+
+  function renderSummary() {
+    const s = state.settings, t = totals(entries(current));
+    const left = s.goal - t.kcal;
+    $('remaining').textContent = fmt(Math.abs(left));
+    $('remainingLabel').textContent = left >= 0 ? 'kcal übrig' : 'kcal zu viel';
+    $('remaining').style.color = left >= 0 ? '' : 'var(--warn)';
+    const circ = 402.1, ratio = Math.min(1, s.goal ? t.kcal / s.goal : 0);
+    $('ringFill').style.strokeDashoffset = circ * (1 - ratio);
+    $('ringFill').style.stroke = left >= 0 ? 'var(--accent)' : 'var(--warn)';
+    $('kcalText').textContent = `${fmt(t.kcal)} / ${fmt(s.goal)} kcal`;
+    $('pText').textContent = `${fmt1(t.p)} / ${fmt(s.protein)} g`;
+    $('cText').textContent = `${fmt1(t.c)} / ${fmt(s.carbs)} g`;
+    $('fText').textContent = `${fmt1(t.f)} / ${fmt(s.fat)} g`;
+    setBar('pBar', t.p, s.protein); setBar('cBar', t.c, s.carbs); setBar('fBar', t.f, s.fat);
+  }
+
+  function renderMeals() {
+    const list = entries(current);
+    if (!list.length) {
+      $('meals').innerHTML = '<p class="empty">Noch keine Einträge für diesen Tag.</p>';
+      return;
+    }
+    $('meals').innerHTML = MEALS.map(meal => {
+      const items = list.filter(e => e.meal === meal);
+      if (!items.length) return '';
+      return `<div class="meal"><h3>${meal}<small>${fmt(totals(items).kcal)} kcal</small></h3><ul class="entries">` +
+        items.map(e => `<li>
+          <div class="name">${escapeHtml(e.name)}${e.grams ? ` <span class="meta">· ${fmt1(e.grams)} g</span>` : ''}
+            <div class="meta">E ${fmt1(e.p)} g · K ${fmt1(e.c)} g · F ${fmt1(e.f)} g</div></div>
+          <span class="kcal">${fmt(e.kcal)} kcal</span>
+          <button class="icon" data-del="${e.id}" aria-label="${escapeHtml(e.name)} löschen">✕</button>
+        </li>`).join('') + '</ul></div>';
+    }).join('');
+  }
+
+  function renderChart() {
+    const goal = state.settings.goal;
+    const days = Array.from({ length: 7 }, (_, i) => shift(current, i - 6));
+    const vals = days.map(k => totals(entries(k)).kcal);
+    const max = Math.max(goal, ...vals) * 1.1 || 1;
+    $('chart').innerHTML = days.map((k, i) => `<div class="col" title="${fmt(vals[i])} kcal">
+        <small>${vals[i] ? fmt(vals[i]) : ''}</small>
+        <div class="area">
+          <div class="goal" style="bottom:${goal / max * 100}%"></div>
+          <div class="b ${vals[i] > goal ? 'over' : ''}" style="height:${vals[i] / max * 100}%"></div>
+        </div>
+        <small${k === current ? ' style="font-weight:700;color:var(--text)"' : ''}>${parseKey(k).toLocaleDateString('de-DE', { weekday: 'short' })}</small>
+      </div>`).join('');
+    const tracked = vals.filter(v => v > 0);
+    $('avgText').textContent = tracked.length
+      ? `Durchschnitt an ${tracked.length} erfassten Tag(en): ${fmt(tracked.reduce((a, b) => a + b, 0) / tracked.length)} kcal · gestrichelte Linie = Tagesziel`
+      : 'Noch keine Daten in diesem Zeitraum.';
+  }
+
+  function renderSettings() {
+    const s = state.settings;
+    $('sGoal').value = s.goal; $('sProtein').value = s.protein; $('sCarbs').value = s.carbs; $('sFat').value = s.fat;
+  }
+
+  function render() {
+    $('dateLabel').textContent = dateLabel(current);
+    renderSummary(); renderMeals(); renderChart();
+  }
+
+  // Automatisches Ausfüllen aus der Lebensmittel-Datenbank
+  function fillFromFood() {
+    const food = allFoods()[$('fName').value.trim()];
+    if (!food) return;
+    const grams = num($('fGrams').value) || 100;
+    if (!$('fGrams').value) $('fGrams').value = 100;
+    const factor = grams / 100;
+    $('fKcal').value = Math.round(food[0] * factor);
+    $('fP').value = round1(food[1] * factor);
+    $('fC').value = round1(food[2] * factor);
+    $('fF').value = round1(food[3] * factor);
+  }
+  $('fName').addEventListener('input', fillFromFood);
+  $('fGrams').addEventListener('input', fillFromFood);
+
+  $('addForm').addEventListener('submit', ev => {
+    ev.preventDefault();
+    const name = $('fName').value.trim();
+    if (!name) return;
+    const e = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      name, meal: $('fMeal').value, grams: num($('fGrams').value),
+      kcal: num($('fKcal').value), p: num($('fP').value), c: num($('fC').value), f: num($('fF').value),
+    };
+    (state.days[current] = entries(current)).push(e);
+    // Neues Lebensmittel mit Grammangabe für später merken
+    if (!BASE_FOODS[name] && e.grams > 0) {
+      const k = 100 / e.grams;
+      state.customFoods[name] = [e.kcal * k, e.p * k, e.c * k, e.f * k].map(round1);
+      renderFoodList();
+    }
+    save(); render();
+    const meal = $('fMeal').value;
+    ev.target.reset();
+    $('fMeal').value = meal;
+    $('fName').focus();
+  });
+
+  $('meals').addEventListener('click', ev => {
+    const id = ev.target.closest('[data-del]')?.dataset.del;
+    if (!id) return;
+    state.days[current] = entries(current).filter(e => e.id !== id);
+    if (!state.days[current].length) delete state.days[current];
+    save(); render();
+  });
+
+  $('prevDay').addEventListener('click', () => { current = shift(current, -1); render(); });
+  $('nextDay').addEventListener('click', () => { current = shift(current, 1); render(); });
+
+  [['sGoal', 'goal'], ['sProtein', 'protein'], ['sCarbs', 'carbs'], ['sFat', 'fat']].forEach(([id, key]) => {
+    $(id).addEventListener('change', () => { state.settings[key] = num($(id).value); save(); render(); });
+  });
+
+  // Mifflin-St-Jeor-Formel
+  $('calcBtn').addEventListener('click', () => {
+    const w = num($('cWeight').value), h = num($('cHeight').value), a = num($('cAge').value);
+    const bmr = 10 * w + 6.25 * h - 5 * a + ($('cSex').value === 'm' ? 5 : -161);
+    const goal = Math.round((bmr * num($('cActivity').value) + num($('cTarget').value)) / 10) * 10;
+    const protein = Math.round(w * 1.8);
+    const fat = Math.round(goal * 0.28 / 9);
+    const carbs = Math.max(0, Math.round((goal - protein * 4 - fat * 9) / 4));
+    state.settings = { goal, protein, carbs, fat };
+    $('calcResult').textContent = `Grundumsatz ${fmt(bmr)} kcal → Ziel ${fmt(goal)} kcal`;
+    save(); renderSettings(); render();
+  });
+
+  $('exportBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `kalorientracker-${todayKey()}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+  $('importBtn').addEventListener('click', () => $('importFile').click());
+  $('importFile').addEventListener('change', async ev => {
+    const file = ev.target.files[0];
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      if (!data || typeof data.days !== 'object') throw new Error('Ungültiges Format');
+      state = Object.assign(defaults(), data);
+      save(); renderFoodList(); renderSettings(); render();
+      alert('Daten importiert.');
+    } catch (e) {
+      alert('Import fehlgeschlagen: ' + e.message);
+    }
+    ev.target.value = '';
+  });
+
+  renderFoodList(); renderSettings(); render();
+})();
+</script>
+</body>
+</html>
