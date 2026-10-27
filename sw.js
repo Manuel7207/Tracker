@@ -1,6 +1,6 @@
 // Service Worker: App offline verfügbar machen.
 // Bei Änderungen an den Dateien VERSION erhöhen, damit der alte Cache ersetzt wird.
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `kalorientracker-${VERSION}`;
 const SHELL = [
   './',

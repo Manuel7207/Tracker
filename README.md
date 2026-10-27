@@ -29,6 +29,8 @@ direkt installieren und dann nur noch die App benutzen – oder Daten per Export
 
 - Einträge nach Mahlzeit (Frühstück, Mittagessen, Abendessen, Snacks) mit Kalorien, Eiweiß, Kohlenhydraten und Fett
 - Lebensmittelsuche (Werte pro 100 g): Menge in Gramm eingeben, Nährwerte werden automatisch berechnet
+- **Suchfenster** (Lupen-Button): alle Lebensmittel durchsuchen, nach Quelle filtern (BLS, Produkte, Eigene, Basis)
+  und per Antippen übernehmen – plus Online-Suche nach Markenprodukten bei Open Food Facts
 - **Bundeslebensmittelschlüssel (BLS)** des Max Rubner-Instituts: Datei (Excel oder CSV) von
   [blsdb.de](https://www.blsdb.de) herunterladen und unter *Einstellungen → BLS-Datei importieren* einlesen.
   Spalten werden automatisch erkannt (BLS-Kürzel wie `ST`, `GCAL`, `ZE`, `ZK`, `ZF` oder Klartext-Überschriften),
